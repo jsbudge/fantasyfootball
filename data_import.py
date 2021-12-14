@@ -3,12 +3,16 @@ import pandas as pd
 from tqdm import tqdm
 from sportsipy.nfl.boxscore import Boxscore, Boxscores
 from sportsipy.nfl.teams import Teams, Roster, Team
+from os.path import exists
 
-player_df = pd.DataFrame()
 team_df = pd.DataFrame()
 
 for yr in np.arange(2000, 2021):
     print(yr)
+    fnme = './pbp_data/pdata_{}.csv'.format(yr)
+    if exists(fnme):
+        continue
+    player_df = pd.DataFrame()
     boxes = Boxscores(1, yr, 17)
     for wk in tqdm(boxes.games):
         for game in boxes.games[wk]:
@@ -23,9 +27,11 @@ for yr in np.arange(2000, 2021):
             home[['team_name', 'season', 'game_id']] = [game['home_name'], wk[-4:], game['boxscore']]
             player_df = player_df.append(away.reset_index())
             player_df = player_df.append(home.reset_index())
+    player_df = player_df.rename(columns={'index': 'player_name'})
+    player_df = player_df.set_index(['season', 'player_name', 'game_id'])
+    player_df.to_csv(fnme)
 
-player_df = player_df.rename(columns={'index': 'player_name'})
-player_df = player_df.set_index(['season', 'player_name', 'game_id'])
+
 
 print('Getting team stats...')
 for yr in np.arange(2000, 2021):
@@ -35,7 +41,6 @@ for yr in np.arange(2000, 2021):
     tdf_yr['season'] = yr
     team_df = team_df.append(tdf_yr)
 
-player_df.to_csv('./data.csv')
-team_df.to_csv('./tdata.csv')
+team_df.to_csv('./pbp_data/tdata.csv')
 
 
