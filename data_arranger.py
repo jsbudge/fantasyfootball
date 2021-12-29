@@ -3,9 +3,10 @@ import pandas as pd
 import seaborn as sns
 from re import search, findall
 import matplotlib.pyplot as plt
+from itertools import product
 
-RE_PNAME_PATTERN = '[0-9]{0,3}-.[.][A-Z-]+'
-PASS_TYPES = ['DEEP_LEFT', '']
+RE_PNAME_PATTERN = '[0-9]{0,3}-.{1,2}[.][A-Z-]+'
+PASS_TYPES = ['DEEP LEFT', 'DEEP RIGHT', 'DEEP MIDDLE', 'SHORT LEFT', 'SHORT RIGHT', 'SHORT MIDDLE']
 
 d_fnme = './pbp_data/pbp_2013.csv'
 p_fnme = './pbp_data/pdata_2013.csv'
@@ -18,7 +19,7 @@ for col in data.columns:
 
 pdata = pd.read_csv(p_fnme)
 
-data = data.loc[data['OffenseTeam'] == 'JAX']
+#data = data.loc[data['OffenseTeam'] == 'JAX']
 id_cols = ['GameId', 'GameDate', 'OffenseTeam', 'DefenseTeam', 'SeasonYear', 'Description', 'PlayType', 'PenaltyType',
            'PenaltyYards', 'SeriesFirstDown', 'NextScore', 'TeamWin', 'Challenger', 'YardLineFixed',
            'YardLineDirection', 'PenaltyTeam'] + [col for col in data.columns if col[:2] == 'Is']
@@ -33,8 +34,12 @@ for idx, row in pass_df.iterrows():
     p_inv = findall(RE_PNAME_PATTERN, id_df.loc[idx, 'Description'])
     if len(p_inv) > 1:
         pass_df.loc[idx, ['QB', 'R']] = [p_inv[0], p_inv[1]]
-    else:
+    elif len(p_inv) > 0:
         pass_df.loc[idx, 'QB'] = p_inv[0]
+    else:
+        pass_df.loc[idx, 'QB'] = 'UNKNOWN'
+    if row['PassType'] not in PASS_TYPES:
+        pass_df.loc[idx, 'PassType'] = 'UNKNOWN'
 
 run_df['RB'] = 0
 run_df.loc[run_df['RushDirection'] == 0, 'RushDirection'] = 'SCRAMBLE'
@@ -77,6 +82,14 @@ for ptype, grp in mjdrew.groupby(['RushDirection']):
     for idx, row in grp.iterrows():
         plt.plot([0, direction + np.random.rand() * .5 - .25], [np.random.rand(), row['Yards']], c=colors[grp_idx])
     grp_idx += 1
+
+
+# Set up some of the more granular stats
+# ----- PASSING -----
+# First, baselines for each set of formations / pass types
+pass_baseline = pass_df.groupby(['Formation', 'PassType']).mean()
+pass_attempts = pass_df.groupby(['Formation', 'PassType']).count()
+#pass_completion = id_df.loc[pass_df.index].pass_df.groupby(['Formation', 'PassType']).mean()
 
 
 
